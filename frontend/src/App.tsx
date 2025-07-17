@@ -4,6 +4,7 @@ import './App.css'
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
+import { Button } from './components/ui/button';
 
 export default function App() {
   const [places, setPlaces] = useState<string[]>([]);
@@ -23,13 +24,16 @@ export default function App() {
 
       <Card className='flex flex-col px-4 py-4 flex-grow max-w-screen-md w-full'>
         <form onSubmit={handleSubmit}>
-          <Label htmlFor='lookup' className='my-2'>Where we headed?</Label>
-          <Input
-            id='lookup'
-            placeholder='123 Hope Street, St Andrews, UK'
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-          />
+          <Label htmlFor='lookup' className='my-2'>Where are we headed?</Label>
+          <div className='flex gap-2'>
+            <Input
+              id='lookup'
+              placeholder='123 Hope Street, St Andrews, UK'
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+            />
+            <Button>Add</Button>
+          </div>
         </form>
         <div className='flex flex-col '>
           {places.map((place, index) => (
