@@ -17,7 +17,7 @@ if GOOGLE_CLOUD_API_KEY is None:
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
-
+# FOR DEV
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -29,9 +29,14 @@ app.add_middleware(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+basic_cache = {}
+
 
 @app.get("/geocode")
 async def geocode_address(address: str | None):
+    if address in basic_cache:
+        return basic_cache[address]
+
     if address is None:
         raise HTTPException(status_code=400, detail="address not specified")
 
@@ -39,8 +44,8 @@ async def geocode_address(address: str | None):
         raise HTTPException(
             status_code=400, detail="address must be less than 50 characters")
 
-    results = requests.get(
-        "https://maps.googleapis.com/maps/api/geocode/json", params={"address": address, "key": GOOGLE_CLOUD_API_KEY})
+    results = requests.get("https://maps.googleapis.com/maps/api/geocode/json",
+                           params={"address": address, "key": GOOGLE_CLOUD_API_KEY})
 
     if not results.ok:
         raise HTTPException(status_code=results.status_code,
@@ -53,8 +58,10 @@ async def geocode_address(address: str | None):
 
     results = results["results"][0]
 
-    return {
+    basic_cache[address] = {
         "name": results["formatted_address"],
         "location": results["geometry"]["location"],
         "viewport": results["geometry"]["viewport"]
     }
+
+    return basic_cache[address]
