@@ -6,102 +6,19 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Button } from './components/ui/button';
 
-import { MapContainer, Marker, Popup, Rectangle, TileLayer } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap } from 'react-leaflet'
 
 import { BACKEND_URL } from './main';
+import type { Address, Coordinates, ViewPort } from './lib/types';
+import { calculateViewPort, getCenterCoordinate } from './lib/mapTools';
 
-interface Coordinates {
-  lat: number;
-  lng: number;
+
+function MapZoomer({ bounds }: { bounds: ViewPort }) {
+  const map = useMap();
+  map.fitBounds([[bounds.northeast.lat, bounds.northeast.lng], [bounds.southwest.lat, bounds.southwest.lng]]);
+  return null;
 }
 
-interface ViewPort {
-  northeast: Coordinates;
-  southwest: Coordinates
-}
-
-interface Address {
-  name: string;
-  location: Coordinates,
-  viewport: ViewPort
-}
-
-function getCenterCoordinate(coordinates: Coordinates[]): Coordinates {
-  // Default to the Center of London
-  if (!coordinates || coordinates.length === 0) {
-    return {
-      lat: 51.505,
-      lng: -0.09
-    }
-  }
-
-  const center: Coordinates = {
-    lat: 0,
-    lng: 0
-  }
-  coordinates.forEach((coordinate) => {
-    center.lat += coordinate.lat;
-    center.lng += coordinate.lng;
-  });
-
-  center.lat /= coordinates.length;
-  center.lng /= coordinates.length;
-
-  return center;
-}
-
-// The antimeridian line *will* cause problems since the coordinates will change signs when crossing
-// BUT since that's like in the middle of the pacific ocean and seperates alaska and russia, 
-// Not going to complicate this logic ;)
-function calculateViewPort(viewports: ViewPort[]): ViewPort {
-  if (!viewports || viewports.length === 0) {
-    return {
-      northeast: {
-        lat: 51.0,
-        lng: -0.08,
-      },
-      southwest: {
-        lat: 51.1,
-        lng: -0.1
-      }
-    }
-  }
-
-  const result: ViewPort = {
-    northeast: {
-      lat: Number.NEGATIVE_INFINITY,
-      lng: Number.NEGATIVE_INFINITY,
-    },
-    southwest: {
-      lat: Number.POSITIVE_INFINITY,
-      lng: Number.POSITIVE_INFINITY,
-    }
-  };
-
-  viewports.forEach((viewport) => {
-    result.northeast.lat = Math.max(result.northeast.lat, viewport.northeast.lat);
-    result.northeast.lng = Math.max(result.northeast.lng, viewport.northeast.lng);
-
-    result.southwest.lat = Math.min(result.southwest.lat, viewport.southwest.lat);
-    result.southwest.lng = Math.min(result.southwest.lng, viewport.southwest.lng);
-  });
-
-  const boxSize = [
-    result.northeast.lat - result.southwest.lat,
-    result.northeast.lng - result.southwest.lng
-  ]
-
-  const latIncrease = boxSize[0] * 0.1;
-  const lngIncrease = boxSize[1] * 0.1;
-
-  result.northeast.lat += latIncrease;
-  result.northeast.lng += lngIncrease;
-
-  result.southwest.lat -= latIncrease;
-  result.southwest.lng -= lngIncrease;
-
-  return result;
-}
 
 export default function App() {
   const [places, setPlaces] = useState<Address[]>([]);
@@ -183,6 +100,7 @@ export default function App() {
             zoom={14}
             style={{ height: '30rem', width: '100%' }}
           >
+            <MapZoomer bounds={bounds} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -198,9 +116,14 @@ export default function App() {
               places.length > 0 &&
               <Rectangle
                 bounds={[[bounds.northeast.lat, bounds.northeast.lng], [bounds.southwest.lat, bounds.southwest.lng]]}
-              />
+              >
+                <Tooltip sticky>
+                  <div>Search Space</div>
+                </Tooltip>
+              </Rectangle>
             }
           </MapContainer>
+          <Button>GO!</Button>
         </Card>
       </div>
     </>
