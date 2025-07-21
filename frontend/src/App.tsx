@@ -9,8 +9,9 @@ import { Button } from './components/ui/button';
 import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap } from 'react-leaflet'
 
 import { BACKEND_URL } from './main';
-import type { Address, Coordinates, ViewPort } from './lib/types';
+import type { Address, ViewPort } from './lib/types/maps';
 import { calculateViewPort, getCenterCoordinate } from './lib/mapTools';
+import { getWays } from './lib/highway';
 
 
 function MapZoomer({ bounds }: { bounds: ViewPort }) {
@@ -123,7 +124,7 @@ export default function App() {
               </Rectangle>
             }
           </MapContainer>
-          <Button>GO!</Button>
+          <Button onClick={() => getWays(bounds)}>GO!</Button>
         </Card>
       </div>
     </>

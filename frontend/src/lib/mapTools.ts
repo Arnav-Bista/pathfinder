@@ -1,4 +1,4 @@
-import type { Coordinates, ViewPort } from "./types";
+import type { Coordinates, ViewPort } from "./types/maps";
 
 export function getCenterCoordinate(coordinates: Coordinates[]): Coordinates {
   // Default to the Center of London
@@ -75,4 +75,16 @@ export function calculateViewPort(viewports: ViewPort[]): ViewPort {
   result.southwest.lng -= lngIncrease;
 
   return result;
+}
+
+// Using the Haversine Formula
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const radius = 6371; // km
+  const p = Math.PI / 180;
+
+  const a = 0.5 - Math.cos((lat2 - lat1) * p) / 2
+                + Math.cos(lat1 * p) * Math.cos(lat2 * p) *
+                  (1 - Math.cos((lon2 - lon1) * p)) / 2;
+
+  return 2 * radius * Math.asin(Math.sqrt(a));
 }

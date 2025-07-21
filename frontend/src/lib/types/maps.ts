@@ -5,11 +5,12 @@ export interface Coordinates {
 
 export interface ViewPort {
   northeast: Coordinates;
-  southwest: Coordinates
+  southwest: Coordinates;
 }
 
 export interface Address {
   name: string;
-  location: Coordinates,
-  viewport: ViewPort
+  location: Coordinates;
+  viewport: ViewPort;
 }
+
