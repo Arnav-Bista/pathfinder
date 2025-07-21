@@ -4,7 +4,7 @@ import type { ViewPort } from "./types/maps";
 import type { Overpass } from "./types/overpass";
 
 // Betraying Type Safety with this one
-function processOverpassResults(data: Overpass) {
+export function processOverpassResults(data: Overpass) {
   const nodes = new Map<number, GraphNode>;
   const elements = data.elements;
   elements.filter(elements => elements.type === 'node')
@@ -31,6 +31,11 @@ function processOverpassResults(data: Overpass) {
         from.edges.push({
           to: to.id,
           weight: calculateDistance(from.lat, from.lng, to.lat, to.lng),
+        });
+
+        to.edges.push({
+          to: from.id,
+          weight: calculateDistance(to.lat, to.lng, from.lat, from.lng),
         });
       }
     });

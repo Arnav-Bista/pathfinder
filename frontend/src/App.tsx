@@ -6,12 +6,13 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Button } from './components/ui/button';
 
-import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap, Polyline } from 'react-leaflet'
 
 import { BACKEND_URL } from './main';
 import type { Address, ViewPort } from './lib/types/maps';
+import type { GraphNode } from './lib/types/graphs';
 import { calculateViewPort, getCenterCoordinate } from './lib/mapTools';
-import { getWays } from './lib/highway';
+import { getWays, processOverpassResults } from './lib/highway';
 
 
 function MapZoomer({ bounds }: { bounds: ViewPort }) {
@@ -26,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState<string>('');
   const [error, setErrors] = useState<string>('');
+  const [graphNodes, setGraphNodes] = useState<Map<number, GraphNode>>(new Map());
 
   const mapCenter = getCenterCoordinate(places.map(a => a.location));
   const bounds = calculateViewPort(places.map(a => a.viewport));
@@ -123,8 +125,37 @@ export default function App() {
                 </Tooltip>
               </Rectangle>
             }
+            {
+              Array.from(graphNodes.values()).map((node) =>
+                node.edges.map((edge) => {
+                  const targetNode = graphNodes.get(edge.to);
+                  if (!targetNode) return null;
+                  return (
+                    <Polyline
+                      key={`${node.id}-${edge.to}`}
+                      positions={[
+                        [node.lat, node.lng],
+                        [targetNode.lat, targetNode.lng]
+                      ]}
+                      color="blue"
+                      weight={2}
+                      opacity={0.6}
+                    />
+                  );
+                })
+              ).flat().filter(Boolean)
+            }
           </MapContainer>
-          <Button onClick={() => getWays(bounds)}>GO!</Button>
+          <Button onClick={async () => {
+            try {
+              const overpassData = await getWays(bounds);
+              const nodes = processOverpassResults(overpassData);
+              setGraphNodes(nodes);
+            } catch (error) {
+              console.error('Error fetching highway data:', error);
+              setErrors('Failed to fetch highway data');
+            }
+          }}>GO!</Button>
         </Card>
       </div>
     </>
