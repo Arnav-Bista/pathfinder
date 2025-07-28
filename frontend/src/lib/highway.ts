@@ -14,7 +14,9 @@ export function processOverpassResults(data: Overpass) {
         id: node.id,
         lat: node.lat,
         lng: node.lon,
-        edges: []
+        edges: [],
+        getDimensionCount: ()=> 2,
+        getDimension: (index) => index === 0 ? node.lat : node.lon
       }
     ));
 

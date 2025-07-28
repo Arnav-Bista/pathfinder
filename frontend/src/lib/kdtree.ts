@@ -4,6 +4,8 @@ export interface Point {
   getDimensionCount(): number;
 }
 
+// https://acme.byu.edu/00000181-a75a-d0ac-abe9-ef7ed9230001/nearest-neighbors-pdf
+
 export class KDNode<T extends Point> {
   constructor(
     public point: T,
@@ -43,51 +45,63 @@ export default class KDTree<T extends Point> {
     return new KDNode(medianPoint, leftChild, rightChild, this.dimensions);
   }
 
+  // Euclidean Distance
+  private calculateDistance(a: Point, b: Point): number {
+    let distance = 0;
+    for (let i = 0; i < a.getDimensionCount(); i++) {
+      distance += Math.pow(a.getDimension(i) - b.getDimension(i), 2);
+    }
+    return Math.sqrt(distance);
+  }
+
   public getNearestNeighbor(target: T): T | null {
-    return this.searchNearest(this.root, target, 0);
-  }
-
-  // Manhattan distance since we don't really care about the precise distance
-  private getCloserNode(target: T, a: T, b: T): T {
-    let distanceA: number = 0;
-    let distanceB: number = 0;
-    for (let i = 0; i < target.getDimensionCount(); i++) {
-      distanceA += Math.abs(target.getDimension(i) - a.getDimension(i));
-      distanceB += Math.abs(target.getDimension(i) - b.getDimension(i));
-    }
-
-    if (distanceA < distanceB) {
-      return a;
-    } else {
-      return b;
-    }
-  }
-
-  private searchNearest(node: KDNode<T> | null, target: T, depth: number): T | null {
-    if (node === null) {
+    if (this.root === null) {
       return null;
     }
-
-    let bestNode: T | null = node.point;
-    let current: T | null = null;
-
-    const axis = depth % this.dimensions;
-    const currentDimension = node.point.getDimension(axis);
-
-    if (currentDimension < target.getDimension(axis)) {
-      current = this.searchNearest(node.left, target, depth + 1);
-      if (current !== null) {
-        bestNode = this.getCloserNode(target, bestNode, current);
-      }
-    }
-
-    if (currentDimension > target.getDimension(axis)) {
-      current = this.searchNearest(node.right, target, depth + 1);
-      if (current !== null) {
-        bestNode = this.getCloserNode(target, bestNode, current);
-      }
-    }
-
-    return bestNode;
+    const bestNode = this.searchNearestNeighbour(this.root, target, null, 0);
+    return bestNode ? bestNode.point : null;
   }
+
+  private searchNearestNeighbour(
+    node: KDNode<T> | null,
+    target: T,
+    best: KDNode<T> | null,
+    depth: number
+  ): KDNode<T> | null {
+    if (node === null) {
+      return best;
+    }
+
+    const dimension = depth % target.getDimensionCount();
+    const distance = this.calculateDistance(target, node.point);
+
+    if (best === null || distance < this.calculateDistance(target, best.point)) {
+      best = node;
+    }
+
+    let nearSide: KDNode<T> | null;
+    let farSide: KDNode<T> | null;
+
+    if (target.getDimension(dimension) < node.point.getDimension(dimension)) {
+      nearSide = node.left;
+      farSide = node.right;
+    } else {
+      nearSide = node.right;
+      farSide = node.left;
+    }
+
+    best = this.searchNearestNeighbour(nearSide, target, best, depth + 1);
+
+    const bestDistance = this.calculateDistance(target, best!.point);
+    const distanceToSplittingPlane = Math.abs(
+      target.getDimension(dimension) - node.point.getDimension(dimension)
+    );
+
+    if (distanceToSplittingPlane < bestDistance) {
+      best = this.searchNearestNeighbour(farSide, target, best, depth + 1);
+    }
+
+    return best;
+  }
+
 }

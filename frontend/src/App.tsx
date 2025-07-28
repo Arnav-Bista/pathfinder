@@ -9,10 +9,11 @@ import { Button } from './components/ui/button';
 import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap, Polyline } from 'react-leaflet'
 
 import { BACKEND_URL } from './main';
-import type { Address, ViewPort } from './lib/types/maps';
+import type { Address, Coordinates, ViewPort } from './lib/types/maps';
 import type { GraphNode } from './lib/types/graphs';
 import { calculateViewPort, getCenterCoordinate } from './lib/mapTools';
 import { getWays, processOverpassResults } from './lib/highway';
+import KDTree from './lib/kdtree';
 
 
 function MapZoomer({ bounds }: { bounds: ViewPort }) {
@@ -24,6 +25,7 @@ function MapZoomer({ bounds }: { bounds: ViewPort }) {
 
 export default function App() {
   const [places, setPlaces] = useState<Address[]>([]);
+  const [neighbours, setNeighbours] = useState<Coordinates[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState<string>('');
   const [error, setErrors] = useState<string>('');
@@ -116,6 +118,13 @@ export default function App() {
               ))
             }
             {
+              neighbours.map((neighbour, index) => (
+                <Marker position={[neighbour.lat, neighbour.lng]} key={index}>
+                  <Popup>{index}</Popup>
+                </Marker>
+              ))
+            }
+            {
               places.length > 0 &&
               <Rectangle
                 bounds={[[bounds.northeast.lat, bounds.northeast.lng], [bounds.southwest.lat, bounds.southwest.lng]]}
@@ -156,8 +165,29 @@ export default function App() {
               setErrors('Failed to fetch highway data');
             }
           }}>GO!</Button>
+          <Button onClick={() => {
+            const kdtree = new KDTree(Array.from(graphNodes.values()));
+            const n = [];
+            console.log("places:", places);
+            for (let i = 0; i < places.length; i++) {
+              const node: GraphNode = {
+                id: 0,
+                lat: places[i].location.lat,
+                lng: places[i].location.lng,
+                edges: [],
+                getDimension: (j) => j === 0 ? places[i].location.lat : places[i].location.lng,
+                getDimensionCount: () => 2,
+              };
+              const nearest = kdtree.getNearestNeighbor(node);
+              n.push({ lat: nearest!.lat, lng: nearest!.lng });
+            }
+            console.log("GOT", n);
+            setNeighbours(n);
+          }}>
+            GET NEIGHBOURS
+          </Button>
         </Card>
-      </div>
+      </div >
     </>
   );
 }

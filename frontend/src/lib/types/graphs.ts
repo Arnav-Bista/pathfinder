@@ -1,8 +1,10 @@
-export interface GraphNode {
+import type { Point } from "../kdtree";
+
+export interface GraphNode extends Point {
   id: number;
   lat: number;
   lng: number;
-  edges: Edge[]
+  edges: Edge[];
 }
 
 export interface Edge {
