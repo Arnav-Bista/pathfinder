@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import './App.css'
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -9,11 +9,12 @@ import { Button } from './components/ui/button';
 import { MapContainer, Marker, Popup, Rectangle, TileLayer, Tooltip, useMap, Polyline } from 'react-leaflet'
 
 import { BACKEND_URL } from './main';
-import type { Address, Coordinates, ViewPort } from './lib/types/maps';
+import type { Address, ViewPort } from './lib/types/maps';
 import type { GraphNode } from './lib/types/graphs';
 import { calculateViewPort, getCenterCoordinate } from './lib/mapTools';
 import { getWays, processOverpassResults } from './lib/highway';
 import KDTree from './lib/kdtree';
+import { dijkastrasSearch } from './lib/graphTools';
 
 
 function MapZoomer({ bounds }: { bounds: ViewPort }) {
@@ -25,7 +26,8 @@ function MapZoomer({ bounds }: { bounds: ViewPort }) {
 
 export default function App() {
   const [places, setPlaces] = useState<Address[]>([]);
-  const [neighbours, setNeighbours] = useState<Coordinates[]>([]);
+  const [neighbours, setNeighbours] = useState<GraphNode[]>([]);
+  const [paths, setPaths] = useState<number[][]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState<string>('');
   const [error, setErrors] = useState<string>('');
@@ -56,6 +58,27 @@ export default function App() {
       setLoading(false);
     }
   }
+
+  const polyPath: Array<Array<ReactNode>> = [];
+  paths.forEach(path => {
+    const currentPath = [];
+    for (let i = 0; i > path.length - 1; i++) {
+      const src = graphNodes.get(path[i])!;
+      const dst = graphNodes.get(path[i + 1])!;
+      currentPath.push(
+        <Polyline
+          key={`${i}-${src.id}-${dst.id}`}
+          positions={[
+            [src.lat, src.lng],
+            [dst.lat, dst.lng]
+          ]}
+        />
+      );
+    }
+    polyPath.push(currentPath);
+  });
+  console.log(paths);
+  console.log(polyPath);
 
 
   return (
@@ -135,24 +158,27 @@ export default function App() {
               </Rectangle>
             }
             {
-              Array.from(graphNodes.values()).map((node) =>
-                node.edges.map((edge) => {
-                  const targetNode = graphNodes.get(edge.to);
-                  if (!targetNode) return null;
-                  return (
-                    <Polyline
-                      key={`${node.id}-${edge.to}`}
-                      positions={[
-                        [node.lat, node.lng],
-                        [targetNode.lat, targetNode.lng]
-                      ]}
-                      color="blue"
-                      weight={2}
-                      opacity={0.6}
-                    />
-                  );
-                })
-              ).flat().filter(Boolean)
+              // Array.from(graphNodes.values()).map((node) =>
+              //   node.edges.map((edge) => {
+              //     const targetNode = graphNodes.get(edge.to);
+              //     if (!targetNode) return null;
+              //     return (
+              //       <Polyline
+              //         key={`${node.id}-${edge.to}`}
+              //         positions={[
+              //           [node.lat, node.lng],
+              //           [targetNode.lat, targetNode.lng]
+              //         ]}
+              //         color="blue"
+              //         weight={2}
+              //         opacity={0.6}
+              //       />
+              //     );
+              //   })
+              // ).flat().filter(Boolean)
+            }
+            {
+              ...polyPath
             }
           </MapContainer>
           <Button onClick={async () => {
@@ -178,11 +204,19 @@ export default function App() {
                 getDimension: (j) => j === 0 ? places[i].location.lat : places[i].location.lng,
                 getDimensionCount: () => 2,
               };
-              const nearest = kdtree.getNearestNeighbor(node);
-              n.push({ lat: nearest!.lat, lng: nearest!.lng });
+              const nearest = kdtree.getNearestNeighbor(node)!;
+              n.push(nearest);
             }
             console.log("GOT", n);
             setNeighbours(n);
+            const paths: number[][] = [];
+            for (let i = 0; i < neighbours.length; i++) {
+              const ends = neighbours.filter(neighbour => neighbour.id != neighbours[i].id);
+              console.log("Ends", ends);
+              paths.push(...dijkastrasSearch(graphNodes, neighbours[i], ends)!);
+            }
+            console.log("Paths", paths);
+            setPaths(paths);
           }}>
             GET NEIGHBOURS
           </Button>
