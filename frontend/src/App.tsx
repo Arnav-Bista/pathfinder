@@ -62,7 +62,7 @@ export default function App() {
   const polyPath: Array<Array<ReactNode>> = [];
   paths.forEach(path => {
     const currentPath = [];
-    for (let i = 0; i > path.length - 1; i++) {
+    for (let i = 0; i < path.length - 1; i++) {
       const src = graphNodes.get(path[i])!;
       const dst = graphNodes.get(path[i + 1])!;
       currentPath.push(
@@ -193,8 +193,11 @@ export default function App() {
           }}>GO!</Button>
           <Button onClick={() => {
             const kdtree = new KDTree(Array.from(graphNodes.values()));
-            const n = [];
+            const nearestNeighbours: Array<GraphNode> = [];
             console.log("places:", places);
+
+
+            // Find nearest neighbors for each place
             for (let i = 0; i < places.length; i++) {
               const node: GraphNode = {
                 id: 0,
@@ -205,18 +208,25 @@ export default function App() {
                 getDimensionCount: () => 2,
               };
               const nearest = kdtree.getNearestNeighbor(node)!;
-              n.push(nearest);
+              nearestNeighbours.push(nearest);
+
             }
-            console.log("GOT", n);
-            setNeighbours(n);
-            const paths: number[][] = [];
-            for (let i = 0; i < neighbours.length; i++) {
-              const ends = neighbours.filter(neighbour => neighbour.id != neighbours[i].id);
+
+            console.log("GOT", nearestNeighbours);
+            setNeighbours(nearestNeighbours);
+
+            // Calculate paths using the found neighbors (not stale state)
+            const calculatedPaths: number[][] = [];
+            for (let i = 0; i < nearestNeighbours.length; i++) {
+              const ends = nearestNeighbours.filter(neighbour => neighbour.id !== nearestNeighbours[i].id);
               console.log("Ends", ends);
-              paths.push(...dijkastrasSearch(graphNodes, neighbours[i], ends)!);
+              const pathsFromCurrent = dijkastrasSearch(graphNodes, nearestNeighbours[i], ends);
+              if (pathsFromCurrent) {
+                calculatedPaths.push(...pathsFromCurrent);
+              }
             }
-            console.log("Paths", paths);
-            setPaths(paths);
+            console.log("Paths", calculatedPaths);
+            setPaths(calculatedPaths);
           }}>
             GET NEIGHBOURS
           </Button>
